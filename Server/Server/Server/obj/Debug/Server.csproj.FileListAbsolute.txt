@@ -1,0 +1,6 @@
+F:\учеба\4 семестр\курсач\Server\Server\Server\bin\Debug\Server.exe.config
+F:\учеба\4 семестр\курсач\Server\Server\Server\bin\Debug\Server.exe
+F:\учеба\4 семестр\курсач\Server\Server\Server\bin\Debug\Server.pdb
+F:\учеба\4 семестр\курсач\Server\Server\Server\obj\Debug\Server.csprojResolveAssemblyReference.cache
+F:\учеба\4 семестр\курсач\Server\Server\Server\obj\Debug\Server.exe
+F:\учеба\4 семестр\курсач\Server\Server\Server\obj\Debug\Server.pdb

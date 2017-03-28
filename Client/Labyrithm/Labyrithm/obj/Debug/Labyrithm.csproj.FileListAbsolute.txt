@@ -1,0 +1,16 @@
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\bin\Debug\Labyrithm.exe.config
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\bin\Debug\Labyrithm.exe
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\bin\Debug\Labyrithm.pdb
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\Labyrithm.csprojResolveAssemblyReference.cache
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\MainWindow.g.cs
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\App.g.cs
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\Labyrithm_MarkupCompile.cache
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\Labyrithm_MarkupCompile.lref
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\MainWindow.baml
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\Labyrithm.g.resources
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\Labyrithm.Properties.Resources.resources
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\Labyrithm.csproj.GenerateResource.Cache
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\Labyrithm.exe
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\obj\Debug\Labyrithm.pdb
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\bin\Debug\Server.exe
+F:\учеба\4 семестр\курсач\Client\Labyrithm\Labyrithm\bin\Debug\Server.pdb
