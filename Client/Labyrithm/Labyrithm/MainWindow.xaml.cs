@@ -23,6 +23,18 @@ namespace Labyrithm
     public partial class MainWindow : Window
     {
         const string FINISHING = "THE_END";
+        //STATES
+        const int GOODBYE = -1;
+        const int FINISH = 0;
+        const int CLIENTSENDPOS = 1;
+        const int SERVERSENDPOS = 2;
+        const int SERVERSENDLAB = 3;
+        const int GAMEOVER = 4;
+        const int CLIENTSENDPOINTS = 5;
+        const int SERVERSENDPOINTS = 6;
+        const int WINNERSENDPOINTS = 7;
+
+
         string currentPosition; //X_Y
         Server.Cell[,] Cells;
         TcpClient client = null;
@@ -30,6 +42,13 @@ namespace Labyrithm
         private Int32 _Width = 15, _Height = 15;
         int curPositionY = 0;
         int curPositionX = 0;
+        int gamePoint = 0;
+        int enemyres ;
+        int level = 1;
+        string points = "";
+        bool winner = false;
+
+
 
         private delegate void UpdateLogCallback(Server.Cell[,] Cells);
         private delegate void UpdateLogEnemyPosition(string position);
@@ -41,6 +60,7 @@ namespace Labyrithm
                
         private void renderCells()
         {
+            
             for (int y = 0; y < _Height; y++)
                 for (int x = 0; x < _Width; x++)
                 {
@@ -48,59 +68,62 @@ namespace Labyrithm
                         labyrithm.Children.Add(new Line()
                         {
                             Stroke = Brushes.Black,
-                            StrokeThickness = 1,
-                            X1 = 20 * x,
-                            Y1 = 20 * y,
-                            X2 = 20 * x + 20,
-                            Y2 = 20 * y
+                            StrokeThickness = 4,
+                            
+                            X1 = 30 * x-2,
+                            Y1 = 30 * y,
+                            X2 = 30 * x + 30+2,
+                            Y2 = 30 * y
                         });
 
                     if (Cells[x, y].Left == Server.CellState.Close)
                         labyrithm.Children.Add(new Line()
                         {
                             Stroke = Brushes.Black,
-                            StrokeThickness = 1,
-                            X1 = 20 * x,
-                            Y1 = 20 * y,
-                            X2 = 20 * x,
-                            Y2 = 20 * y + 20
+                            StrokeThickness = 4,
+                            X1 = 30 * x,
+                            Y1 = 30 * y-2,
+                            X2 = 30 * x,
+                            Y2 = 30 * y + 30+2
                         });
 
                     if (Cells[x, y].Right == Server.CellState.Close)
                         labyrithm.Children.Add(new Line()
                         {
                             Stroke = Brushes.Black,
-                            StrokeThickness = 1,
-                            X1 = 20 * x + 20,
-                            Y1 = 20 * y,
-                            X2 = 20 * x + 20,
-                            Y2 = 20 * y + 20
+                            StrokeThickness = 4,
+                            X1 = 30 * x + 30,
+                            Y1 = 30 * y-2,
+                            X2 = 30 * x + 30,
+                            Y2 = 30 * y + 30+2
                         });
 
                     if (Cells[x, y].Bottom == Server.CellState.Close)
                         labyrithm.Children.Add(new Line()
                         {
                             Stroke = Brushes.Black,
-                            StrokeThickness = 1,
-                            X1 = 20 * x,
-                            Y1 = 20 * y + 20,
-                            X2 = 20 * x + 20,
-                            Y2 = 20 * y + 20
+                            StrokeThickness = 4,
+                            X1 = 30 * x-2,
+                            Y1 = 30 * y + 30,
+                            X2 = 30 * x + 30+2,
+                            Y2 = 30 * y + 30
                         });
                 }
             labyrithm.Children.Add(new Rectangle()
             {
                 Stroke = Brushes.Blue,
                 Fill = Brushes.Blue,
-                Width = 20,
-                Height = 20,
+                Width = 24,
+                Height = 24,
+                Margin = new Thickness(3,3,0,0)
             });
             labyrithm.Children.Add(new Rectangle()
             {
                 Stroke = Brushes.Red,
                 Fill = Brushes.Red,
-                Width = 20,
-                Height = 20
+                Width = 24,
+                Height = 24,
+                Margin = new Thickness(3, 3, 0, 0)
             });
         }
 
@@ -129,22 +152,53 @@ namespace Labyrithm
                     {
                         Rectangle Figure = item as Rectangle;
                         if (Figure.Fill == Brushes.Red)
-                            Figure.Margin = new Thickness(curPositionX * 20, curPositionY * 20, 0, 0);
+                            Figure.Margin = new Thickness(curPositionX * 30 + 3, curPositionY * 30 + 3 , 0, 0);
                     }
                 if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left|| e.Key == Key.Right)
-                    if (curPositionX != 14 ||  curPositionY != 14) { 
+                 //   if (curPositionX != 14 ||  curPositionY != 14)
+                    { 
                         currentPosition = curPositionX.ToString(); ;
                         currentPosition += "_" + curPositionY.ToString();
                         byte[] position = Encoding.UTF8.GetBytes(currentPosition);
+                        stream.Write(BitConverter.GetBytes(CLIENTSENDPOS), 0, BitConverter.GetBytes(CLIENTSENDPOS).Length);
                         stream.Write(position, 0, position.Length);
                     }   
+                if (e.Key == Key.Z)
+                { curPositionX = 14;
+                    curPositionY = 14;
+                }
                 if (curPositionX == 14 && curPositionY == 14)
                 {
+                    gamePoint += 10;
                     curPositionX = 0;
                     curPositionY = 0;
-                    byte[] byteMessage = Encoding.UTF8.GetBytes(FINISHING);
-                    stream.Write(byteMessage, 0, byteMessage.Length);
-                    stream.Flush();
+                    level++;
+                    byte[] byteMessage;
+                    if (level == 7)
+                    {
+                        byteMessage = BitConverter.GetBytes(GAMEOVER);
+                        //    Encoding.UTF8.GetBytes(FINISH);
+                        stream.Write(byteMessage, 0, byteMessage.Length);
+                        winner = true;
+                        //    byteMessage = BitConverter.GetBytes(WINNERSENDPOINTS);
+                        //    byte[] res = new byte[8];
+                        //    for (int i = 0; i < 4; i++)
+                        //        res[i] = byteMessage[i];
+                        //    byteMessage = BitConverter.GetBytes(gamePoint);
+                        //    for (int i = 0; i < 4; i++)
+                        //        res[i + 4] = byteMessage[i];
+                        //    //stream.Write(byteMessage, 0, byteMessage.Length);
+                        //    //byteMessage = BitConverter.GetBytes(gamePoint);
+                        //    stream.Write(res, 0, res.Length);
+                    }
+                    else
+                    {
+                        byteMessage = BitConverter.GetBytes(FINISH);
+                        //    Encoding.UTF8.GetBytes(FINISH);
+                        stream.Write(byteMessage, 0, byteMessage.Length);
+                    }
+                    
+                   // stream.Flush();
                 }
             }
         }
@@ -158,32 +212,86 @@ namespace Labyrithm
             threadForReceive.Start();
         }
 
+        private string ParseResult(string inputResult)
+        {
+           // int err=0;
+            string[] arrayOfResults = inputResult.Split('.');
+            //if (Int32.TryParse(arrayOfResults[0],out err)==Int32.TryParse(arrayOfResults[1],out err))
+            
+            if (Convert.ToInt32(arrayOfResults[0]) > Convert.ToInt32(arrayOfResults[1]))
+            {
+                if (winner)
+                    return $"You WIN. Your points: {arrayOfResults[0]}. Your's enemy points: {arrayOfResults[1]}";
+                else
+                    return $"You LOSE. Your points: {arrayOfResults[1]}. Your's enemy points: {arrayOfResults[0]}";
+            }
+            if (Convert.ToInt32(arrayOfResults[0]) < Convert.ToInt32(arrayOfResults[1]))
+            {
+                if (winner)
+                    return $"You WIN. Your points: {arrayOfResults[1]}. Your's enemy points: {arrayOfResults[0]}";
+                else
+                    return $"You LOSE. Your points: {arrayOfResults[0]}. Your's enemy points: {arrayOfResults[1]}";
+            }
+            return "";
+        }
+
         private void Listen()
         {
             while (true)
             {
                 try
                 {
-                    byte[] data = new byte[65000]; // буфер для получаемых данных
+                    byte[] data = new byte[12]; // буфер для получаемых данных
                     stream.Read(data, 0, data.Length);
-                    if (data[1] != 95 && data[2]!=95)//говнище кривое!!!
+                    int state = BitConverter.ToInt32(data, 0);
+                    if (state == SERVERSENDLAB) {
+                        byte[] lab = new byte[65000];
+                        stream.Read(lab, 0, lab.Length);
+                      //  if (data[1] != 95 && data[2] != 95)//говнище кривое!!!
+                       // {
+                            BinaryFormatter formatter = new BinaryFormatter();
+                            using (System.IO.BinaryWriter file = new System.IO.BinaryWriter(File.Open("temp.dat", FileMode.OpenOrCreate)))
+                            {
+                                foreach (byte i in lab)
+                                    file.Write(i);
+                            }
+                            using (FileStream fs = new FileStream("temp.dat", FileMode.OpenOrCreate))
+                            {
+                                Cells = (Server.Cell[,])formatter.Deserialize(fs);
+                            }
+                            // Thread.Sleep(2000);
+                            this.labyrithm.Dispatcher.Invoke(new UpdateLogCallback(UpdateLog), new object[] { Cells });
+                        curPositionX = 0;
+                        curPositionY = 0;
+
+                    }
+                    if (state == SERVERSENDPOS)
                     {
-                        BinaryFormatter formatter = new BinaryFormatter();
-                        using (System.IO.BinaryWriter file = new System.IO.BinaryWriter(File.Open("temp.dat", FileMode.OpenOrCreate)))
-                        {
-                            foreach (byte i in data)
-                                file.Write(i);
-                        }
-                        using (FileStream fs = new FileStream("temp.dat", FileMode.OpenOrCreate))
-                        {
-                            Cells = (Server.Cell[,])formatter.Deserialize(fs);
-                        }
-                        Thread.Sleep(2000);
-                        this.labyrithm.Dispatcher.Invoke(new UpdateLogCallback(UpdateLog), new object[] { Cells });
-                    }else
+                        byte[] pos = new byte[5];
+                        stream.Read(pos, 0, pos.Length);                        
+                        this.labyrithm.Dispatcher.Invoke(new UpdateLogEnemyPosition(EnemyPosition), new object[] { Encoding.UTF8.GetString(pos) });
+                    }
 
-                    this.labyrithm.Dispatcher.Invoke(new UpdateLogEnemyPosition(EnemyPosition), new object[] { Encoding.UTF8.GetString(data) });
-
+                    if (state == GAMEOVER)
+                    {
+                        byte[] posa = new byte[10];
+                        stream.Read(posa, 0, posa.Length);
+                        string aaa = Encoding.UTF8.GetString(posa);
+                        MessageBox.Show(ParseResult(aaa), "rtkgnrtng");
+                        //ПАУЗА (возможно заблокировать) клавиатуру
+                        //byte[] po = BitConverter.GetBytes(CLIENTSENDPOINTS);
+                        //stream.Write(po, 0, po.Length);
+                        //po = BitConverter.GetBytes(gamePoint);
+                        //stream.Write(po, 0, po.Length);
+                    }
+                    if (state == SERVERSENDPOINTS)
+                    {
+                        //byte[] data1 = new byte[5];
+                        //stream.Read(data1, 0, data1.Length);
+                        points = Encoding.UTF8.GetString(data,4,6);
+                        //enemyres = BitConverter.ToInt32(data,4);
+                        MessageBox.Show(ParseResult(points),"rtkgnrtng");
+                    }
                 }
                 catch
                 {
@@ -216,7 +324,10 @@ namespace Labyrithm
                 if (flag)
                 {
                     if (position[i] != '\0' && position[i] != '_')
+                    {
                         temp += position[i];
+                        y = Convert.ToInt32(temp);
+                    }
                     else
                         if (temp != "")
                     {
@@ -230,12 +341,14 @@ namespace Labyrithm
                 {
                     Rectangle Figure = item as Rectangle;
                     if (Figure.Fill == Brushes.Blue)
-                        Figure.Margin = new Thickness(x * 20, y * 20, 0, 0);
+                        Figure.Margin = new Thickness(x * 30 +3, y * 30+3, 0, 0);
                 }
         }
 
         private void mainWindow_Closed(object sender, EventArgs e)
         {
+            byte[] data = BitConverter.GetBytes(GOODBYE);
+            stream.Write(data, 0, data.Length);
             Environment.Exit(0);
         }
 
@@ -249,8 +362,10 @@ namespace Labyrithm
                 byte[] data = Encoding.UTF8.GetBytes(nickname);
                 
                 stream.Write(data, 0, data.Length);
-                data = new byte[65000]; // буфер для получаемых данных
-                StringBuilder builder = new StringBuilder();
+                // data = new byte[65000]; // буфер для получаемых данных
+                byte[] size = new byte[10];
+                stream.Read(size,0,size.Length);
+                data = new byte[BitConverter.ToInt32(size,0)];
                 stream.Read(data, 0, data.Length);
                 BinaryFormatter formatter = new BinaryFormatter();
                 using (System.IO.BinaryWriter file = new System.IO.BinaryWriter(File.Open("temp.dat", FileMode.OpenOrCreate)))

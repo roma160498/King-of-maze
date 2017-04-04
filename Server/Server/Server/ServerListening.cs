@@ -15,7 +15,17 @@ namespace Server
     {
         private Int32 _Width, _Height;
         public Cell[,] Cells;
+        public int amountOfPlayers=0;
+        //public struct ClientInfo
+        //{
+        //    public ClientTreatment player;
+        //    public TcpClient socket;
+        //    public string name;
+        //    public int gamePoints;
+        //}
         public static List<ClientTreatment> allClients= new List<ClientTreatment>();
+       // public static List<ClientInfo> clients = new List<ClientInfo>();
+        public static List<TcpClient> allSockets = new List<TcpClient>();
 
         protected internal void StartListen()
         {
@@ -24,21 +34,22 @@ namespace Server
                 this.Generation();
                 string hostname = Dns.GetHostName();
                 //работаю без интеренетаааа
-                IPAddress addr = Dns.GetHostByName(hostname).AddressList[2];
-               // IPAddress addr = IPAddress.Parse("127.0.0.1");
+                //IPAddress addr = Dns.GetHostByName(hostname).AddressList[2];
+                IPAddress addr = IPAddress.Parse("127.0.0.1");
                 TcpListener Listener = new TcpListener(addr, 2200);
                 Listener.Start();
-               // IPEndPoint endPoint = new IPEndPoint(addr, 5555);
-              //  Listener = new Socket(addr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-             //   Listener.Bind(endPoint);
-              //  Listener.Listen(2);
                 Console.WriteLine("Сервер работает. IP: {0}", addr);
                 while (true)
                 {
+                  //  ClientInfo personalInf;
                     TcpClient clientSocket = Listener.AcceptTcpClient();
-                    //allClients.Add(clientSocket);
                     ClientTreatment client = new ClientTreatment(clientSocket, this);
+                  //  personalInf.player = client;
+
+                 //   client.Add();
                     allClients.Add(client);
+                    allSockets.Add(clientSocket);
+                    amountOfPlayers++;
                     Thread thread = new Thread(new ParameterizedThreadStart(client.Process));
                     thread.Start(Cells);
                 }
@@ -48,40 +59,44 @@ namespace Server
                 Console.WriteLine(ex.Message);
             }
         }
-        protected internal void SendMessage(ClientTreatment client, byte[] msg)
+
+        protected internal void SendPosition(ClientTreatment client, byte[] msg)
         {
             for (int i = 0; i < allClients.Count; i++)
             {
                 if (client != allClients[i])
                     allClients[i].Stream.Write(msg, 0, msg.Length);
-            //    else
-              //      allClients[i].Stream.Write(msg, 0, msg.Length);
-               // Thread.Sleep(1500);
             }
         }
-        protected internal void SendMessage_A(ClientTreatment client, byte[] msg)
+        protected internal void SendPoints()
         {
             for (int i = 0; i < allClients.Count; i++)
             {
+                string res = "";
+                for (int j=0; j < allClients.Count; j++)
+                {
+                    res += allClients[j].gamePoints.ToString()+'.';
+                }
                 //if (client != allClients[i])
+                byte[] msg = Encoding.UTF8.GetBytes(res);
+                    allClients[i].Stream.Write(msg, 0, msg.Length);
+            }
+        }
+        protected internal void SendLabyrinth(byte[] msg)
+        {
+            for (int i = 0; i < allClients.Count; i++)
+            {
                 allClients[i].Stream.Write(msg, 0, msg.Length);
                 Thread.Sleep(100);
             }
         }
+        protected internal void CloseConnection(ClientTreatment client)
+        {
+            allClients.Remove(client);
+            allSockets.Remove(client.Socket);
+            client.Socket.Close();
+        }
 
-        //protected internal void closeSocket(Socket socket)
-        //{
-        //    for (int i = 0; i < allClients.Count; i++)
-        //    {
-        //        if (socket == allClients[i])
-        //        {
-        //            allClients[i].Shutdown(SocketShutdown.Both);
-        //            allClients[i].Close();
-        //            allClients.Remove(allClients[i]);
-        //        }
-
-        //    }
-        //}
         protected internal void Generation()
         {
             _Width = 15;

@@ -11,14 +11,30 @@ namespace Server
 {
     class ClientTreatment
     {
-        static TcpClient client;
+        const int GOODBYE = -1;
+        const int FINISH = 0;
+        const int CLIENTSENDPOS = 1;
+        const int SERVERSENDPOS = 2;
+        const int SERVERSENDLAB = 3;
+        const int GAMEOVER = 4;
+        const int CLIENTSENDPOINTS = 5;
+        const int SERVERSENDPOINTS = 6;
+        const int WINNERSENDPOINTS = 7;
+
+        protected internal TcpClient Socket { get; set; }
         ServerListening server;
         protected internal NetworkStream Stream { get; private set; }
+        protected internal string ClientName { get; private set; }
+        //TcpClient socket 
+        protected internal int gamePoints { get; private set; }
+        //private int gamePoints = 0;
+        public int level = 1;
 
-        public ClientTreatment(TcpClient clientSocket, ServerListening serverClass)
+        public ClientTreatment(TcpClient clientSocket, ServerListening serverClass )
         {
-            client = clientSocket;
+            Socket = clientSocket;
             server = serverClass;
+            this.gamePoints = 0;
         }
 
         public void Process(object array)
@@ -26,9 +42,9 @@ namespace Server
             try
             {
                 byte[] byteMessage = new byte[64];
-                Stream = client.GetStream();
+                Stream = Socket.GetStream();
                 Stream.Read(byteMessage,0,byteMessage.Length);
-                Console.WriteLine(ParseTheString(Encoding.UTF8.GetString(byteMessage)));
+                ClientName = Encoding.UTF8.GetString(byteMessage);
                 BinaryFormatter formatter = new BinaryFormatter();
                 using (FileStream fs = new FileStream("people.dat", FileMode.OpenOrCreate))
                 {
@@ -37,40 +53,107 @@ namespace Server
                     fs.Close();
                 }
                 byteMessage = System.IO.File.ReadAllBytes("people.dat");
+                int sizeInt = byteMessage.Length;
+                byte[] size = BitConverter.GetBytes(sizeInt);
+                Stream.Write(size, 0, size.Length);
                 Stream.Write(byteMessage, 0, byteMessage.Length);
-              //  bool flag = true;
                 while (true)
                 {
                     try
                     {
-                       //
-                        byte[] data= new byte[64];
+                        byte[] data= new byte[8];
                         Stream.Read(data,0,data.Length);
                         string temp = Encoding.UTF8.GetString(data);
-                        if (temp.Substring(0, 7) == "THE_END")
+                        int state = BitConverter.ToInt32(data,0);
+                        //int points = bi
+                       // int sizeint = 0;
+                      //  if (temp.Substring(0, 7) == "THE_END")
+                        if (state== FINISH)
                         {
-                            server.Generation();
-                            using (FileStream fs = new FileStream("people.dat", FileMode.OpenOrCreate))
-                            {
-                                formatter.Serialize(fs, server.Cells);
-                                Console.WriteLine("Объект сериализован");
-                                fs.Close();
-                            }
-                            byteMessage = System.IO.File.ReadAllBytes("people.dat");
-                           // System.Threading.Thread.Sleep(1000); убрал сейчас
-                            server.SendMessage_A(this, byteMessage);
+                                server.Generation();
+                                using (FileStream fs = new FileStream("people.dat", FileMode.OpenOrCreate))
+                                {
+                                    formatter.Serialize(fs, server.Cells);
+                                    Console.WriteLine("Объект сериализован");
+                                    fs.Close();
+                                }
+                                byteMessage = System.IO.File.ReadAllBytes("people.dat");
+                                //sizeInt = byteMessage.Length;
+                                size = BitConverter.GetBytes(SERVERSENDLAB);
+                                // System.Threading.Thread.Sleep(1000); убрал сейчас
+                                server.SendLabyrinth(size);
+                                server.SendLabyrinth(byteMessage);
+                            this.gamePoints += 10;
+                            //}
+                            //else
+                            //{
+                            //    size = BitConverter.GetBytes(GAMEOVER);
+                            //    // System.Threading.Thread.Sleep(1000); убрал сейчас
+                            //    server.SendPosition(this,size);
+                                
+                            //    //size = BitConverter.GetBytes(server.amountOfPlayers);
+                            //    //server.SendLabyrinth(size);
+                            //    //size = BitConverter.GetBytes(gamePoints);
+                            //    //server.se
+                            //   // size = BitConverter.GetBytes(poi);
+                            //   // server.SendLabyrinth();
+                            //    //server.SendLabyrinth(byteMessage);
+                            //}
                             //System.Threading.Thread.Sleep(1000);
                           //  flag = false;
                         }
-                        else
+
+                        if (state== CLIENTSENDPOS)
                         {
-                        //    if (flag)
-                         //   {
-                                byteMessage = Encoding.UTF8.GetBytes(temp);
-                                server.SendMessage(this, byteMessage);
+                            //    if (flag)
+                            //   {
+                            byte[] data2 = new byte[64];
+                            Stream.Read(data2, 0, data2.Length);
+                            sizeInt = data2.Length;
+                            size = BitConverter.GetBytes(SERVERSENDPOS);
+                            //   string tmp = Encoding.UTF8.GetString(data);
+                            // byteMessage = Encoding.UTF8.GetBytes(temp);
+                            server.SendPosition(this, size);
+                            server.SendPosition(this, data2);
                                 Stream.Flush();
                          //   }
                        //     else flag = true;
+                        }
+                        if (state == WINNERSENDPOINTS)
+                        {
+                            int tate = BitConverter.ToInt32(data, 4);
+                            byte[] aaa = BitConverter.GetBytes(tate);
+                            //Stream.Read(data, 0, data.Length);
+                            size = BitConverter.GetBytes(SERVERSENDPOINTS);
+                            byte[] res = new byte[8];
+                            for (int i = 0; i < 4; i++)
+                                res[i] = size[i];
+                            for (int i = 0; i < 4; i++)
+                                res[i+4] = aaa[i];
+                            server.SendPosition(this,res);
+                            //Stream.Flush();
+                            //System.Threading.Thread.Sleep(1000);
+                            //server.SendPosition(this, data);
+                            
+                        }
+                        //if (state == GOODBYE)
+                        //    server.CloseConnection(this);
+                        if (state == GAMEOVER)
+                        {
+                            this.gamePoints += 10;
+                            data = BitConverter.GetBytes(GAMEOVER);
+                            server.SendLabyrinth(data);
+                            server.SendPoints();
+                        }
+                        if (state == CLIENTSENDPOINTS)
+                        {
+                            Stream.Read(data, 0, data.Length);
+                            size = BitConverter.GetBytes(SERVERSENDPOS);
+                           // server.SendLabyrinth(size);
+                            //server.SendLabyrinth(data);
+                            
+                            server.SendPosition(this,size);
+                            server.SendPosition(this,data);
                         }
                     }
                     catch
