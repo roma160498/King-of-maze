@@ -20,6 +20,8 @@ namespace Server
         const int CLIENTSENDPOINTS = 5;
         const int SERVERSENDPOINTS = 6;
         const int WINNERSENDPOINTS = 7;
+        const int CLIENTGETCOIN = 8;
+        const int REMOVECOIN = 9;
 
         protected internal TcpClient Socket { get; set; }
         ServerListening server;
@@ -57,40 +59,60 @@ namespace Server
                 byte[] size = BitConverter.GetBytes(sizeInt);
                 Stream.Write(size, 0, size.Length);
                 Stream.Write(byteMessage, 0, byteMessage.Length);
+                string coinPos = server.posX.ToString() + '.' + server.posY.ToString();
+                size = Encoding.UTF8.GetBytes(coinPos);
+                Stream.Write(size, 0, size.Length);
                 while (true)
                 {
                     try
                     {
-                        byte[] data= new byte[8];
-                        Stream.Read(data,0,data.Length);
+                        byte[] data = new byte[8];
+                        Stream.Read(data, 0, data.Length);
                         string temp = Encoding.UTF8.GetString(data);
-                        int state = BitConverter.ToInt32(data,0);
+                        int state = BitConverter.ToInt32(data, 0);
                         //int points = bi
-                       // int sizeint = 0;
-                      //  if (temp.Substring(0, 7) == "THE_END")
-                        if (state== FINISH)
+                        // int sizeint = 0;
+                        //  if (temp.Substring(0, 7) == "THE_END")
+                        if (state == FINISH)
                         {
-                                server.Generation();
-                                using (FileStream fs = new FileStream("people.dat", FileMode.OpenOrCreate))
-                                {
-                                    formatter.Serialize(fs, server.Cells);
-                                    Console.WriteLine("Объект сериализован");
-                                    fs.Close();
-                                }
-                                byteMessage = System.IO.File.ReadAllBytes("people.dat");
-                                //sizeInt = byteMessage.Length;
-                                size = BitConverter.GetBytes(SERVERSENDLAB);
-                                // System.Threading.Thread.Sleep(1000); убрал сейчас
-                                server.SendLabyrinth(size);
-                                server.SendLabyrinth(byteMessage);
+
+                            server.Generation();
+                            using (FileStream fs = new FileStream("people.dat", FileMode.OpenOrCreate))
+                            {
+                                formatter.Serialize(fs, server.Cells);
+                                Console.WriteLine("Объект сериализован");
+                                fs.Close();
+                            }
+                            byteMessage = System.IO.File.ReadAllBytes("people.dat");
+                            //sizeInt = byteMessage.Length;
+                            size = BitConverter.GetBytes(SERVERSENDLAB);
+                            // System.Threading.Thread.Sleep(1000); убрал сейчас
+                            server.SendLabyrinth(size);
+                            server.SendLabyrinth(byteMessage);
                             this.gamePoints += 10;
+                            /*     Random generateCoinPos = new Random();
+                                 server.posX = generateCoinPos.Next(0, 14);
+                                 server.posY = generateCoinPos.Next(0, 14);*/
+                            coinPos = server.posX.ToString() + '.' + server.posY.ToString();
+                            size = Encoding.UTF8.GetBytes(coinPos);
+                            server.SendLabyrinth(size);
+                            //Stream.Write(size, 0, size.Length);
+                            if (server.Lvevel == 5)
+                            {
+                                data = BitConverter.GetBytes(GAMEOVER);
+                                server.SendLabyrinth(data);
+                                server.SendPoints();
+                            }
+                            else
+                                server.Lvevel++;
+
                             //}
                             //else
                             //{
                             //    size = BitConverter.GetBytes(GAMEOVER);
                             //    // System.Threading.Thread.Sleep(1000); убрал сейчас
                             //    server.SendPosition(this,size);
-                                
+
                             //    //size = BitConverter.GetBytes(server.amountOfPlayers);
                             //    //server.SendLabyrinth(size);
                             //    //size = BitConverter.GetBytes(gamePoints);
@@ -100,10 +122,10 @@ namespace Server
                             //    //server.SendLabyrinth(byteMessage);
                             //}
                             //System.Threading.Thread.Sleep(1000);
-                          //  flag = false;
+                            //  flag = false;
                         }
 
-                        if (state== CLIENTSENDPOS)
+                        if (state == CLIENTSENDPOS)
                         {
                             //    if (flag)
                             //   {
@@ -115,9 +137,9 @@ namespace Server
                             // byteMessage = Encoding.UTF8.GetBytes(temp);
                             server.SendPosition(this, size);
                             server.SendPosition(this, data2);
-                                Stream.Flush();
-                         //   }
-                       //     else flag = true;
+                            Stream.Flush();
+                            //   }
+                            //     else flag = true;
                         }
                         if (state == WINNERSENDPOINTS)
                         {
@@ -129,18 +151,19 @@ namespace Server
                             for (int i = 0; i < 4; i++)
                                 res[i] = size[i];
                             for (int i = 0; i < 4; i++)
-                                res[i+4] = aaa[i];
-                            server.SendPosition(this,res);
+                                res[i + 4] = aaa[i];
+                            server.SendPosition(this, res);
                             //Stream.Flush();
                             //System.Threading.Thread.Sleep(1000);
                             //server.SendPosition(this, data);
-                            
+
                         }
                         //if (state == GOODBYE)
                         //    server.CloseConnection(this);
                         if (state == GAMEOVER)
                         {
                             this.gamePoints += 10;
+                            server.Lvevel++;
                             data = BitConverter.GetBytes(GAMEOVER);
                             server.SendLabyrinth(data);
                             server.SendPoints();
@@ -149,11 +172,17 @@ namespace Server
                         {
                             Stream.Read(data, 0, data.Length);
                             size = BitConverter.GetBytes(SERVERSENDPOS);
-                           // server.SendLabyrinth(size);
+                            // server.SendLabyrinth(size);
                             //server.SendLabyrinth(data);
-                            
-                            server.SendPosition(this,size);
-                            server.SendPosition(this,data);
+
+                            server.SendPosition(this, size);
+                            server.SendPosition(this, data);
+                        }
+                        if (state == CLIENTGETCOIN)
+                        {
+                            data = BitConverter.GetBytes(REMOVECOIN);
+                            server.SendPosition(this, data);
+                            this.gamePoints += 20;
                         }
                     }
                     catch

@@ -16,6 +16,9 @@ namespace Server
         private Int32 _Width, _Height;
         public Cell[,] Cells;
         public int amountOfPlayers=0;
+        public int Lvevel { get; set; }
+        public int posX { get; set; }
+        public int posY { get; set; }
         //public struct ClientInfo
         //{
         //    public ClientTreatment player;
@@ -31,11 +34,16 @@ namespace Server
         {
             try
             {
+                this.Lvevel = 1;
                 this.Generation();
+                //соднание монеткииииии
+               // Coin coin = new Coin();
+                
+                
                 string hostname = Dns.GetHostName();
                 //работаю без интеренетаааа
-                //IPAddress addr = Dns.GetHostByName(hostname).AddressList[2];
-                IPAddress addr = IPAddress.Parse("127.0.0.1");
+                IPAddress addr = Dns.GetHostByName(hostname).AddressList[2];
+                //IPAddress addr = IPAddress.Parse("127.0.0.1");
                 TcpListener Listener = new TcpListener(addr, 2200);
                 Listener.Start();
                 Console.WriteLine("Сервер работает. IP: {0}", addr);
@@ -70,17 +78,51 @@ namespace Server
         }
         protected internal void SendPoints()
         {
-            for (int i = 0; i < allClients.Count; i++)
+            string resLoser= "";
+            string resWinner = "";
+            byte[] msg;
+            if (allClients[0].gamePoints > allClients[1].gamePoints)
             {
-                string res = "";
-                for (int j=0; j < allClients.Count; j++)
-                {
-                    res += allClients[j].gamePoints.ToString()+'.';
-                }
-                //if (client != allClients[i])
-                byte[] msg = Encoding.UTF8.GetBytes(res);
-                    allClients[i].Stream.Write(msg, 0, msg.Length);
+                resLoser = $"YOU LOSE. You points {allClients[1].gamePoints.ToString()}. Enemy points {allClients[0].gamePoints.ToString()}";
+                resWinner = $"YOU WIN. You points {allClients[0].gamePoints.ToString()}. Enemy points {allClients[1].gamePoints.ToString()}";
+                msg = Encoding.UTF8.GetBytes(resLoser);
+                allClients[1].Stream.Write(msg,0,msg.Length);
+                msg = Encoding.UTF8.GetBytes(resWinner);
+                allClients[0].Stream.Write(msg, 0, msg.Length);
             }
+            if (allClients[0].gamePoints < allClients[1].gamePoints)
+            {
+                resLoser = $"YOU LOSE. You points {allClients[0].gamePoints.ToString()}. Enemy points {allClients[1].gamePoints.ToString()}";
+                resWinner = $"YOU WIN. You points {allClients[1].gamePoints.ToString()}. Enemy points {allClients[0].gamePoints.ToString()}";
+                msg = Encoding.UTF8.GetBytes(resLoser);
+                allClients[0].Stream.Write(msg, 0, msg.Length);
+                msg = Encoding.UTF8.GetBytes(resWinner);
+                allClients[1].Stream.Write(msg, 0, msg.Length);
+            }
+            if (allClients[0].gamePoints == allClients[1].gamePoints)
+            {
+                resWinner = $"DRAW. Points: {allClients[1].gamePoints.ToString()}";
+                msg = Encoding.UTF8.GetBytes(resLoser);
+                allClients[0].Stream.Write(msg, 0, msg.Length);
+                //msg = Encoding.UTF8.GetBytes(resWinner);
+                allClients[1].Stream.Write(msg, 0, msg.Length);
+            }
+            //msg = Encoding.UTF8.GetBytes(res);
+            //allClients[0].Stream.Write
+            //for (int i = 0; i < allClients.Count; i++)
+            //{
+
+            //    if (allClients[0].gamePoints>allClients[1].gamePoints)
+
+            //    string res = "";
+            //    for (int j=0; j < allClients.Count; j++)
+            //    {
+            //        res += allClients[j].gamePoints.ToString()+'.';
+            //    }
+            //    //if (client != allClients[i])
+            //    byte[] msg = Encoding.UTF8.GetBytes(res);
+            //        allClients[i].Stream.Write(msg, 0, msg.Length);
+            //}
         }
         protected internal void SendLabyrinth(byte[] msg)
         {
@@ -99,6 +141,12 @@ namespace Server
 
         protected internal void Generation()
         {
+           // do {
+                Random generateCoinPos = new Random();
+                this.posX = generateCoinPos.Next(1, 14);
+                this.posY = generateCoinPos.Next(1, 14);
+           // } while ((this.posX != 14 && this.posX != 14) || ((this.posX != 0 && this.posX != 0)));
+            
             _Width = 15;
             _Height = 15;
             Cells = new Cell[_Width, _Height];

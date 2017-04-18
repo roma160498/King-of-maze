@@ -11,6 +11,7 @@
         <TextBox x:Name="IPaddress" HorizontalAlignment="Left" Height="26" Margin="168,72,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="99"/>
         <Button x:Name="submitting" Content="Submit" HorizontalAlignment="Left" Margin="168,103,0,0" VerticalAlignment="Top" Width="99" Height="25" Click="submitting_Click"/>
         <Canvas x:Name="labyrithm" HorizontalAlignment="Left" Height="260" Margin="126,10,0,0" VerticalAlignment="Top" Width="304"/>
+        <Label x:Name="label" Content="1" HorizontalAlignment="Left" Height="64" Margin="662,410,-97.2,0" VerticalAlignment="Top" Width="152"/>
 
     </Grid>
 </Window>
