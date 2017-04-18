@@ -48,6 +48,22 @@ namespace Server
                 Console.WriteLine(ex.Message);
             }
         }
+        protected internal void SendLabyrinth(byte[] msg)
+        {
+            for (int i = 0; i < allClients.Count; i++)
+            {
+                allClients[i].Stream.Write(msg, 0, msg.Length);
+                Thread.Sleep(300);
+            }
+        }
+        protected internal void SendPosition(ClientTreatment client, byte[] msg)
+        {
+            for (int i = 0; i < allClients.Count; i++)
+            {
+                if (client != allClients[i])
+                    allClients[i].Stream.Write(msg, 0, msg.Length);
+            }
+        }
         protected internal void SendMessage(ClientTreatment client, byte[] msg)
         {
             for (int i = 0; i < allClients.Count; i++)

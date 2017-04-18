@@ -22,7 +22,11 @@ namespace Labyrithm
 {
     public partial class MainWindow : Window
     {
-        const string FINISHING = "THE_END";
+        const int GOODBYE = -1;
+        const int FINISH = 0;
+        const int CLIENTSENDPOS = 1;
+        const int SERVERSENDPOS = 2;
+        const int SERVERSENDLAB = 3;
         string currentPosition; //X_Y
         Server.Cell[,] Cells;
         TcpClient client = null;
@@ -132,19 +136,23 @@ namespace Labyrithm
                             Figure.Margin = new Thickness(curPositionX * 20, curPositionY * 20, 0, 0);
                     }
                 if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left|| e.Key == Key.Right)
-                    if (curPositionX != 14 ||  curPositionY != 14) { 
-                        currentPosition = curPositionX.ToString(); ;
-                        currentPosition += "_" + curPositionY.ToString();
-                        byte[] position = Encoding.UTF8.GetBytes(currentPosition);
-                        stream.Write(position, 0, position.Length);
+                //   if (curPositionX != 14 ||  curPositionY != 14) { 
+                {     
                     }   
                 if (curPositionX == 14 && curPositionY == 14)
                 {
                     curPositionX = 0;
                     curPositionY = 0;
-                    byte[] byteMessage = Encoding.UTF8.GetBytes(FINISHING);
+                    byte[] byteMessage = BitConverter.GetBytes(FINISH);
                     stream.Write(byteMessage, 0, byteMessage.Length);
                     stream.Flush();
+                }
+                else {
+                    currentPosition = curPositionX.ToString(); ;
+                    currentPosition += "_" + curPositionY.ToString();
+                    byte[] position = Encoding.UTF8.GetBytes(currentPosition);
+                    stream.Write(BitConverter.GetBytes(CLIENTSENDPOS), 0, BitConverter.GetBytes(CLIENTSENDPOS).Length);
+                    stream.Write(position, 0, position.Length);
                 }
             }
         }
@@ -164,30 +172,44 @@ namespace Labyrithm
             {
                 try
                 {
-                    byte[] data = new byte[65000]; // буфер для получаемых данных
+                    byte[] data = new byte[12]; // буфер для получаемых данных
                     stream.Read(data, 0, data.Length);
-                    if (data[1] != 95 && data[2]!=95)//говнище кривое!!!
+                    int state = BitConverter.ToInt32(data, 0);
+                    
+                    if (state == SERVERSENDLAB)//говнище кривое!!!
                     {
+                        byte[] lab = new byte[65000];
+                        stream.Read(lab, 0, lab.Length);
                         BinaryFormatter formatter = new BinaryFormatter();
                         using (System.IO.BinaryWriter file = new System.IO.BinaryWriter(File.Open("temp.dat", FileMode.OpenOrCreate)))
                         {
-                            foreach (byte i in data)
+                            foreach (byte i in lab)
                                 file.Write(i);
                         }
                         using (FileStream fs = new FileStream("temp.dat", FileMode.OpenOrCreate))
                         {
                             Cells = (Server.Cell[,])formatter.Deserialize(fs);
+                            fs.Close();
                         }
-                        Thread.Sleep(2000);
+                        //Thread.Sleep(2000);
+                        curPositionX = 0;
+                        curPositionY = 0;
                         this.labyrithm.Dispatcher.Invoke(new UpdateLogCallback(UpdateLog), new object[] { Cells });
-                    }else
+                    }
+                    if (state == SERVERSENDPOS)
+                    {
+                        byte[] pos = new byte[5];
+                        stream.Read(pos, 0, pos.Length);
+                        this.labyrithm.Dispatcher.Invoke(new UpdateLogEnemyPosition(EnemyPosition), new object[] { Encoding.UTF8.GetString(pos) });
+                    }
 
-                    this.labyrithm.Dispatcher.Invoke(new UpdateLogEnemyPosition(EnemyPosition), new object[] { Encoding.UTF8.GetString(data) });
+
 
                 }
-                catch
+                catch (Exception ex)
                 {
-                    
+                    Console.WriteLine(ex.Message);//возможна ошибка при подключении
+
                 }
             }
         }
@@ -199,7 +221,20 @@ namespace Labyrithm
 
         private void EnemyPosition(string position)
         {
-            int x=0, y=0;
+            try
+            {
+                string[] array = position.Split('_');
+                int x = Convert.ToInt32(array[0]), y = Convert.ToInt32(array[1]);
+                foreach (var item in labyrithm.Children)
+                    if (item is Rectangle)
+                    {
+                        Rectangle Figure = item as Rectangle;
+                        if (Figure.Fill == Brushes.Blue)
+                            Figure.Margin = new Thickness(x * 20, y * 20, 0, 0);
+                    }
+            }
+            catch { }
+            /*int x=0, y=0;
             string temp="";
             bool flag = false;
             for (int i = 0; i < position.Length; i++)
@@ -224,14 +259,8 @@ namespace Labyrithm
                     }
                 }
                 if (i > 7) break;
-            }
-            foreach (var item in labyrithm.Children)
-                if (item is Rectangle)
-                {
-                    Rectangle Figure = item as Rectangle;
-                    if (Figure.Fill == Brushes.Blue)
-                        Figure.Margin = new Thickness(x * 20, y * 20, 0, 0);
-                }
+            }*/
+            
         }
 
         private void mainWindow_Closed(object sender, EventArgs e)
@@ -253,6 +282,7 @@ namespace Labyrithm
                 StringBuilder builder = new StringBuilder();
                 stream.Read(data, 0, data.Length);
                 BinaryFormatter formatter = new BinaryFormatter();
+                
                 using (System.IO.BinaryWriter file = new System.IO.BinaryWriter(File.Open("temp.dat", FileMode.OpenOrCreate)))
                 {
                     foreach (byte i in data)
@@ -261,6 +291,7 @@ namespace Labyrithm
                 using (FileStream fs = new FileStream("temp.dat", FileMode.OpenOrCreate))
                 {
                     Cells = (Server.Cell[,])formatter.Deserialize(fs);
+                    fs.Close();
                 }
                 renderCells();
                 nickName.Visibility = Visibility.Hidden;
