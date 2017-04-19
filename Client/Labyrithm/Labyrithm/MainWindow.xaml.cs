@@ -27,6 +27,9 @@ namespace Labyrithm
         const int CLIENTSENDPOS = 1;
         const int SERVERSENDPOS = 2;
         const int SERVERSENDLAB = 3;
+        const int GAMEOVER = 4;
+        const int CLIENTGETCOIN = 8;
+        const int REMOVECOIN = 9;
         string currentPosition; //X_Y
         Server.Cell[,] Cells;
         TcpClient client = null;
@@ -34,9 +37,14 @@ namespace Labyrithm
         private Int32 _Width = 15, _Height = 15;
         int curPositionY = 0;
         int curPositionX = 0;
-
+        int coinPosX;
+        int coinPosY;
+        Ellipse coin;
         private delegate void UpdateLogCallback(Server.Cell[,] Cells);
         private delegate void UpdateLogEnemyPosition(string position);
+        private delegate void UpdateLogClearCoin();
+
+        private delegate void UpdateLogPause();
 
         public MainWindow()
         {
@@ -106,6 +114,15 @@ namespace Labyrithm
                 Width = 20,
                 Height = 20
             });
+            coin = new Ellipse()
+            {
+                Stroke = Brushes.Black,
+                Fill = Brushes.Yellow,
+                Width = 20,
+                Height = 20,
+                Margin = new Thickness(coinPosX * 20 , coinPosY * 20, 0, 0),
+            };
+            labyrithm.Children.Add(coin);
         }
 
         private void mainWindow_KeyDown(object sender, KeyEventArgs e)
@@ -135,24 +152,40 @@ namespace Labyrithm
                         if (Figure.Fill == Brushes.Red)
                             Figure.Margin = new Thickness(curPositionX * 20, curPositionY * 20, 0, 0);
                     }
+                byte[] byteMessage;
+                if (curPositionX == coinPosX && curPositionY == coinPosY)
+                {
+                    labyrithm.Children.Remove(coin);
+                    coinPosX = 0;
+                    coinPosY = 0;
+                    byteMessage = BitConverter.GetBytes(CLIENTGETCOIN);
+                    stream.Write(byteMessage, 0, byteMessage.Length);
+                    return;
+                }
                 if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left|| e.Key == Key.Right)
                 //   if (curPositionX != 14 ||  curPositionY != 14) { 
                 {     
-                    }   
+                    }
+                if (e.Key == Key.Z)
+                {
+                    curPositionX = 14;
+                    curPositionY = 14;
+                }
                 if (curPositionX == 14 && curPositionY == 14)
                 {
                     curPositionX = 0;
                     curPositionY = 0;
-                    byte[] byteMessage = BitConverter.GetBytes(FINISH);
+                    byteMessage = BitConverter.GetBytes(FINISH);
                     stream.Write(byteMessage, 0, byteMessage.Length);
-                    stream.Flush();
+                    //Thread.Sleep(5000);
+                    //stream.Flush();
                 }
                 else {
                     currentPosition = curPositionX.ToString(); ;
                     currentPosition += "_" + curPositionY.ToString();
                     byte[] position = Encoding.UTF8.GetBytes(currentPosition);
-                    stream.Write(BitConverter.GetBytes(CLIENTSENDPOS), 0, BitConverter.GetBytes(CLIENTSENDPOS).Length);
-                    stream.Write(position, 0, position.Length);
+                 //  stream.Write(BitConverter.GetBytes(CLIENTSENDPOS), 0, BitConverter.GetBytes(CLIENTSENDPOS).Length);
+                 //   stream.Write(position, 0, position.Length);
                 }
             }
         }
@@ -194,7 +227,15 @@ namespace Labyrithm
                         //Thread.Sleep(2000);
                         curPositionX = 0;
                         curPositionY = 0;
+                        byte[] size = new byte[10];
+                        stream.Read(size, 0, size.Length);
+                        string tempSTR = Encoding.UTF8.GetString(size);
+                        string[] arrayofpos = tempSTR.Split('.');
+                        coinPosX = Convert.ToInt32(arrayofpos[0]);
+                        coinPosY = Convert.ToInt32(arrayofpos[1]);
                         this.labyrithm.Dispatcher.Invoke(new UpdateLogCallback(UpdateLog), new object[] { Cells });
+                        System.Threading.Thread.Sleep(300);
+                        stream.Flush();
                     }
                     if (state == SERVERSENDPOS)
                     {
@@ -202,10 +243,28 @@ namespace Labyrithm
                         stream.Read(pos, 0, pos.Length);
                         this.labyrithm.Dispatcher.Invoke(new UpdateLogEnemyPosition(EnemyPosition), new object[] { Encoding.UTF8.GetString(pos) });
                     }
+                    if (state == GAMEOVER)
+                    {
+                        byte[] posa = new byte[45];
+                        stream.Read(posa, 0, posa.Length);
+                        string aaa = Encoding.UTF8.GetString(posa);
+                        MessageBox.Show(aaa, "rtkgnrtng");
+                        //ПАУЗА (возможно заблокировать) клавиатуру
 
+                    }
+                    if (state == REMOVECOIN)
+                    {
+                        //this.labyrithm.Dispatcher.Invoke(new UpdateLogChangePos(ChangePos), new object[] { });
+                        this.labyrithm.Dispatcher.Invoke(new UpdateLogClearCoin(DeleteCoin), new object[] { });
+                        coinPosX = 0;
+                        coinPosY = 0;
+                    }
+                    if (state == 10)//говнище кривое!!!
+                    {
+                        this.labyrithm.Dispatcher.Invoke(new UpdateLogPause(Pusee), new object[] {  });
+                    }
 
-
-                }
+                    }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);//возможна ошибка при подключении
@@ -213,10 +272,19 @@ namespace Labyrithm
                 }
             }
         }
+        private void DeleteCoin()
+        {
+            labyrithm.Children.Remove(coin);
+        }
+        private void Pusee()
+        {
+            Thread.Sleep(5000);
+        }
         private void UpdateLog(Server.Cell[,] Cells)
         {
             labyrithm.Children.Clear();
             renderCells();
+          //  Thread.Sleep(5000);
         }
 
         private void EnemyPosition(string position)
@@ -276,9 +344,12 @@ namespace Labyrithm
                 stream = client.GetStream();
 
                 byte[] data = Encoding.UTF8.GetBytes(nickname);
-                
+               
                 stream.Write(data, 0, data.Length);
-                data = new byte[65000]; // буфер для получаемых данных
+                byte[] size = new byte[10];
+                stream.Read(size, 0, size.Length);
+                data = new byte[BitConverter.ToInt32(size, 0)];
+                //data = new byte[65000]; // буфер для получаемых данных
                 StringBuilder builder = new StringBuilder();
                 stream.Read(data, 0, data.Length);
                 BinaryFormatter formatter = new BinaryFormatter();
@@ -293,6 +364,11 @@ namespace Labyrithm
                     Cells = (Server.Cell[,])formatter.Deserialize(fs);
                     fs.Close();
                 }
+                stream.Read(size, 0, size.Length);
+                string tempSTR = Encoding.UTF8.GetString(size);
+                string[] arrayofpos = tempSTR.Split('.');
+                coinPosX = Convert.ToInt32(arrayofpos[0]);
+                coinPosY = Convert.ToInt32(arrayofpos[1]);
                 renderCells();
                 nickName.Visibility = Visibility.Hidden;
                 IPaddress.Visibility = Visibility.Hidden;
