@@ -13,13 +13,15 @@ namespace Server
 {
     class ServerListening
     {
-        private Int32 _Width, _Height;
-        public Cell[,] Cells;
         public int Level { get; set; }
         public int posX { get; set; }
         public int posY { get; set; }
-        public static List<ClientTreatment> allClients= new List<ClientTreatment>();
 
+        private Int32 _Width, _Height;
+        public Cell[,] Cells;
+        public int playersAmount;
+        public int currentAmount = 0;
+        public static List<ClientTreatment> allClients= new List<ClientTreatment>();
         public static List<TcpClient> allSockets = new List<TcpClient>();
 
 
@@ -27,6 +29,8 @@ namespace Server
         {
             try
             {
+                Console.WriteLine("Количество игроков:");
+                playersAmount = Convert.ToInt32(Console.ReadLine());
                 this.Level = 1;
                 this.Generation();
                 string hostname = Dns.GetHostName();
@@ -34,7 +38,7 @@ namespace Server
                 IPAddress addr = Dns.GetHostByName(hostname).AddressList[2];
                // IPAddress addr = IPAddress.Parse("127.0.0.1");
                 TcpListener Listener = new TcpListener(addr, 2200);
-                Listener.Start();
+                Listener.Start(playersAmount);
                // IPEndPoint endPoint = new IPEndPoint(addr, 5555);
               //  Listener = new Socket(addr.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
              //   Listener.Bind(endPoint);
@@ -44,11 +48,20 @@ namespace Server
                 {
                     TcpClient clientSocket = Listener.AcceptTcpClient();
                     //allClients.Add(clientSocket);
+                    currentAmount++;
                     ClientTreatment client = new ClientTreatment(clientSocket, this);
                     allClients.Add(client);
                     allSockets.Add(clientSocket);
-                    Thread thread = new Thread(new ParameterizedThreadStart(client.Process));
-                    thread.Start(Cells);
+                  //  if (currentAmount == playersAmount)
+                   // {
+                    //    for (int i =0; i<allClients.Count;i++)
+                     //   {
+                       //     new System.Threading.Thread(delegate () { allClients[i].Process(Cells); }).Start();
+                            Thread thread = new Thread(new ParameterizedThreadStart(client.Process));
+                            thread.Start(Cells);
+                           // Thread.Sleep(1000);
+                       // }
+                   // }
                 }
             }
             catch (Exception ex)
@@ -72,16 +85,38 @@ namespace Server
                     allClients[i].Stream.Write(msg, 0, msg.Length);
             }
         }
-        protected internal void SendMessage(ClientTreatment client, byte[] msg)
+
+        protected internal void SendPlayersStat()
         {
+            string results="";
+            int j = 0;
             for (int i = 0; i < allClients.Count; i++)
             {
-                if (client != allClients[i])
-                    allClients[i].Stream.Write(msg, 0, msg.Length);
-            //    else
-              //      allClients[i].Stream.Write(msg, 0, msg.Length);
-               // Thread.Sleep(1500);
+                results += allClients[i].ClientName.Trim('\0')+'.';
+                results += allClients[i].gamePoints.ToString()+'.';
             }
+            byte[] msg;
+            for (int i = 0; i < allClients.Count; i++)
+            {
+                msg = BitConverter.GetBytes(results.Length);
+                allClients[i].Stream.Write(msg, 0, msg.Length);
+                msg = Encoding.UTF8.GetBytes(results);
+                allClients[i].Stream.Write(msg, 0, msg.Length);
+            }
+            /*    byte[] msg;
+                for (int i=0;i<allClients.Count;i++)
+                {
+                    for (int j = 0; j < allClients.Count; j++)
+                    {
+                        msg = Encoding.UTF8.GetBytes(allClients[j].ClientName);
+                        allClients[i].Stream.Write(msg, 0, msg.Length);
+                        msg = Encoding.UTF8.GetBytes((allClients[j].gamePoints).ToString());
+                        allClients[i].Stream.Write(msg, 0, msg.Length);
+                    }
+                    msg = Encoding.UTF8.GetBytes("\0");
+                    allClients[i].Stream.Write(msg, 0, msg.Length);
+                }*/
+
         }
         protected internal void SendPoints()
         {

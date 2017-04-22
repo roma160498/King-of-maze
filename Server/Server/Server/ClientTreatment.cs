@@ -19,6 +19,7 @@ namespace Server
         const int GAMEOVER = 4;
         const int CLIENTGETCOIN = 8;
         const int REMOVECOIN = 9;
+        const int LETSSTART = 10;
         static TcpClient client;
         ServerListening server;
         protected internal NetworkStream Stream { get; private set; }
@@ -37,6 +38,7 @@ namespace Server
         {
             try
             {
+                
                 byte[] byteMessage = new byte[64];
                 Stream = client.GetStream();
                 Stream.Read(byteMessage,0,byteMessage.Length);
@@ -54,8 +56,12 @@ namespace Server
                 
                 int sizeInt = byteMessage.Length;
                 byte[] size = BitConverter.GetBytes(sizeInt);
+              //  do
+               // { }
+                //while (server.currentAmount != server.playersAmount);
                 Stream.Write(size, 0, size.Length);
                 Stream.Write(byteMessage, 0, byteMessage.Length);
+                
                 string coinPos = server.posX.ToString() + '.' + server.posY.ToString();
                 size = Encoding.UTF8.GetBytes(coinPos);
                 
@@ -68,7 +74,8 @@ namespace Server
                 {
                     try
                     {
-                       //
+                        //
+                        
                         byte[] data= new byte[8];
                         if (server.Level == 6)
                         {
@@ -81,8 +88,7 @@ namespace Server
                         int state = BitConverter.ToInt32(data, 0);
                         if (state == FINISH)
                         {
-                           // size = BitConverter.GetBytes(10);
-                           // server.SendLabyrinth(size);
+
                             server.Generation();
                             using (FileStream fs = new FileStream("people.dat", FileMode.OpenOrCreate))
                             {
@@ -101,6 +107,8 @@ namespace Server
                             coinPos = server.posX.ToString() + '.' + server.posY.ToString();
                             size = Encoding.UTF8.GetBytes(coinPos);
                             server.SendLabyrinth(size);
+                            //отправка игроков и их результатиков
+                            server.SendPlayersStat();
                             // server.SendMessage_A(this, byteMessage);
                             System.Threading.Thread.Sleep(1000);
                           //  flag = false;
@@ -129,6 +137,12 @@ namespace Server
                             data = BitConverter.GetBytes(REMOVECOIN);
                             server.SendPosition(this, data);
                             this.gamePoints += 20;
+                        }
+                        if (state == 11)
+                        {
+                            if (server.currentAmount == server.playersAmount)
+                                server.SendLabyrinth(BitConverter.GetBytes(LETSSTART));
+                           // server.currentAmount--;
                         }
                     }
                     catch

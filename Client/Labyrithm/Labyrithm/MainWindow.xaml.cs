@@ -30,6 +30,7 @@ namespace Labyrithm
         const int GAMEOVER = 4;
         const int CLIENTGETCOIN = 8;
         const int REMOVECOIN = 9;
+        const int LETSSTART = 10;
         string currentPosition; //X_Y
         Server.Cell[,] Cells;
         TcpClient client = null;
@@ -40,9 +41,14 @@ namespace Labyrithm
         int coinPosX;
         int coinPosY;
         Ellipse coin;
+        Rectangle back;
+        string nickname;
+        bool connected = false;
         private delegate void UpdateLogCallback(Server.Cell[,] Cells);
         private delegate void UpdateLogEnemyPosition(string position);
         private delegate void UpdateLogClearCoin();
+        private delegate void UpdateList(int index,string name);
+        private delegate void UpdateHideFields();
 
         private delegate void UpdateLogPause();
 
@@ -127,76 +133,93 @@ namespace Labyrithm
 
         private void mainWindow_KeyDown(object sender, KeyEventArgs e)
         {
-            if (submitting.Visibility == Visibility.Hidden)
+            if (connected)
             {
-                if (e.Key == Key.Up)
-                    if (curPositionY > 0)
-                        if (Cells[curPositionX, curPositionY].Top == Server.CellState.Open)
-                            curPositionY--;
-                if (e.Key == Key.Down)
-                    if (curPositionY < 15)
-                        if (Cells[curPositionX, curPositionY].Bottom == Server.CellState.Open)
-                            curPositionY++;
-                if (e.Key == Key.Left)
-                    if (curPositionX > 0)
-                        if (Cells[curPositionX, curPositionY].Left == Server.CellState.Open)
-                            curPositionX--;
-                if (e.Key == Key.Right)
-                    if (curPositionX < 15)
-                        if (Cells[curPositionX, curPositionY].Right == Server.CellState.Open)
-                            curPositionX++;
-                foreach (var item in labyrithm.Children)
-                    if (item is Rectangle)
+                // labyrithm.Visibility = Visibility.Visible;
+                try
+                {
+                    labyrithm.Children.Remove(back);
+                }
+                catch { }
+                if (submitting.Visibility == Visibility.Hidden)
+                {
+                    if (e.Key == Key.Up)
+                        if (curPositionY > 0)
+                            if (Cells[curPositionX, curPositionY].Top == Server.CellState.Open)
+                                curPositionY--;
+                    if (e.Key == Key.Down)
+                        if (curPositionY < 15)
+                            if (Cells[curPositionX, curPositionY].Bottom == Server.CellState.Open)
+                                curPositionY++;
+                    if (e.Key == Key.Left)
+                        if (curPositionX > 0)
+                            if (Cells[curPositionX, curPositionY].Left == Server.CellState.Open)
+                                curPositionX--;
+                    if (e.Key == Key.Right)
+                        if (curPositionX < 15)
+                            if (Cells[curPositionX, curPositionY].Right == Server.CellState.Open)
+                                curPositionX++;
+                    foreach (var item in labyrithm.Children)
+                        if (item is Rectangle)
+                        {
+                            Rectangle Figure = item as Rectangle;
+                            if (Figure.Fill == Brushes.Red)
+                                Figure.Margin = new Thickness(curPositionX * 20, curPositionY * 20, 0, 0);
+                        }
+                    byte[] byteMessage;
+                    if (curPositionX == coinPosX && curPositionY == coinPosY)
                     {
-                        Rectangle Figure = item as Rectangle;
-                        if (Figure.Fill == Brushes.Red)
-                            Figure.Margin = new Thickness(curPositionX * 20, curPositionY * 20, 0, 0);
+                        labyrithm.Children.Remove(coin);
+                        coinPosX = 0;
+                        coinPosY = 0;
+                        byteMessage = BitConverter.GetBytes(CLIENTGETCOIN);
+                        stream.Write(byteMessage, 0, byteMessage.Length);
+                        return;
                     }
-                byte[] byteMessage;
-                if (curPositionX == coinPosX && curPositionY == coinPosY)
-                {
-                    labyrithm.Children.Remove(coin);
-                    coinPosX = 0;
-                    coinPosY = 0;
-                    byteMessage = BitConverter.GetBytes(CLIENTGETCOIN);
-                    stream.Write(byteMessage, 0, byteMessage.Length);
-                    return;
-                }
-                if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left|| e.Key == Key.Right)
-                //   if (curPositionX != 14 ||  curPositionY != 14) { 
-                {     
+                    if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Left || e.Key == Key.Right)
+                    //   if (curPositionX != 14 ||  curPositionY != 14) { 
+                    {
                     }
-                if (e.Key == Key.Z)
-                {
-                    curPositionX = 14;
-                    curPositionY = 14;
-                }
-                if (curPositionX == 14 && curPositionY == 14)
-                {
-                    curPositionX = 0;
-                    curPositionY = 0;
-                    byteMessage = BitConverter.GetBytes(FINISH);
-                    stream.Write(byteMessage, 0, byteMessage.Length);
-                    //Thread.Sleep(5000);
-                    //stream.Flush();
-                }
-                else {
-                    currentPosition = curPositionX.ToString(); ;
-                    currentPosition += "_" + curPositionY.ToString();
-                    byte[] position = Encoding.UTF8.GetBytes(currentPosition);
-                 //  stream.Write(BitConverter.GetBytes(CLIENTSENDPOS), 0, BitConverter.GetBytes(CLIENTSENDPOS).Length);
-                 //   stream.Write(position, 0, position.Length);
+                    if (e.Key == Key.Z)
+                    {
+                        curPositionX = 14;
+                        curPositionY = 14;
+                    }
+                    if (curPositionX == 14 && curPositionY == 14)
+                    {
+                        curPositionX = 0;
+                        curPositionY = 0;
+                        byteMessage = BitConverter.GetBytes(FINISH);
+                        stream.Write(byteMessage, 0, byteMessage.Length);
+                        //Thread.Sleep(5000);
+                        //stream.Flush();
+                    }
+                    else
+                    {
+                        currentPosition = curPositionX.ToString(); ;
+                        currentPosition += "_" + curPositionY.ToString();
+                        byte[] position = Encoding.UTF8.GetBytes(currentPosition);
+                        //  stream.Write(BitConverter.GetBytes(CLIENTSENDPOS), 0, BitConverter.GetBytes(CLIENTSENDPOS).Length);
+                        //   stream.Write(position, 0, position.Length);
+                    }
                 }
             }
         }
 
         private void submitting_Click(object sender, RoutedEventArgs e)
         {
-            string nickname = nickName.Text;
+            nickname = nickName.Text;
             string ipaddress = IPaddress.Text;
-            ConnectToServer(nickname,ipaddress);
-            Thread threadForReceive = new Thread(new ThreadStart(Listen));
-            threadForReceive.Start();
+            client = new TcpClient(ipaddress, 2200);
+            stream = client.GetStream();
+            ConnectToServer();
+            //Thread startThread = new Thread(new ThreadStart(ConnectToServer));
+            //startThread.Start();
+        //    if (connected)
+         //   {
+                Thread threadForReceive = new Thread(new ThreadStart(Listen));
+                threadForReceive.Start();
+          //  }
         }
 
         private void Listen()
@@ -233,7 +256,9 @@ namespace Labyrithm
                         string[] arrayofpos = tempSTR.Split('.');
                         coinPosX = Convert.ToInt32(arrayofpos[0]);
                         coinPosY = Convert.ToInt32(arrayofpos[1]);
+                        
                         this.labyrithm.Dispatcher.Invoke(new UpdateLogCallback(UpdateLog), new object[] { Cells });
+                        GetStat();
                         System.Threading.Thread.Sleep(300);
                         stream.Flush();
                     }
@@ -259,9 +284,9 @@ namespace Labyrithm
                         coinPosX = 0;
                         coinPosY = 0;
                     }
-                    if (state == 10)//говнище кривое!!!
+                    if (state == LETSSTART)//говнище кривое!!!
                     {
-                        this.labyrithm.Dispatcher.Invoke(new UpdateLogPause(Pusee), new object[] {  });
+                        connected = true;
                     }
 
                     }
@@ -271,6 +296,30 @@ namespace Labyrithm
 
                 }
             }
+        }
+        private void GetStat()
+        {
+            byte[] msg = new byte[5];
+            string results;
+            int size;
+
+                stream.Read(msg, 0, msg.Length);
+                size = BitConverter.ToInt32(msg,0);
+            byte[] msg2 = new byte[size];
+            stream.Read(msg2, 0, msg2.Length);
+                results = Encoding.UTF8.GetString(msg2);
+                this.labyrithm.Dispatcher.Invoke(new UpdateList(AddToList), new object[] { size,results });
+               
+        }
+        private void AddToList(int index,string name)
+        {
+            string[] array = name.Split('.');
+            List<PlayerStat> stat = new List<PlayerStat>();
+            for (int i = 0; i < array.Length-1; i += 2)
+            {
+                stat.Add(new PlayerStat(array[i], array[i + 1]));
+            }
+            playersStatList.DataContext = stat;
         }
         private void DeleteCoin()
         {
@@ -286,7 +335,14 @@ namespace Labyrithm
             renderCells();
           //  Thread.Sleep(5000);
         }
-
+        private void HideFields()
+        {
+            nickName.Visibility = Visibility.Hidden;
+            IPaddress.Visibility = Visibility.Hidden;
+            submitting.Visibility = Visibility.Hidden;
+            
+            //  Thread.Sleep(5000);
+        }
         private void EnemyPosition(string position)
         {
             try
@@ -336,12 +392,11 @@ namespace Labyrithm
             Environment.Exit(0);
         }
 
-        private void ConnectToServer(string nickname,string ipaddress)
+        private void ConnectToServer()
         {      
             try
             {
-                client = new TcpClient(ipaddress, 2200);
-                stream = client.GetStream();
+                
 
                 byte[] data = Encoding.UTF8.GetBytes(nickname);
                
@@ -369,10 +424,22 @@ namespace Labyrithm
                 string[] arrayofpos = tempSTR.Split('.');
                 coinPosX = Convert.ToInt32(arrayofpos[0]);
                 coinPosY = Convert.ToInt32(arrayofpos[1]);
+             //   this.labyrithm.Dispatcher.Invoke(new UpdateHideFields(HideFields), new object[] { });
+                //this.labyrithm.Dispatcher.Invoke(new UpdateHideFields(HideFields), new object[] { });
+             //   this.labyrithm.Dispatcher.Invoke(new UpdateLogCallback(UpdateLog), new object[] { Cells });
                 renderCells();
+               back = new Rectangle();
+                back.Width = 200;
+                back.Height = 304;
+                back.Fill = Brushes.Black;
+                labyrithm.Children.Add(back);
+                stream.Write(BitConverter.GetBytes(11), 0, BitConverter.GetBytes(11).Length);
                 nickName.Visibility = Visibility.Hidden;
                 IPaddress.Visibility = Visibility.Hidden;
                 submitting.Visibility = Visibility.Hidden;
+               // connected = true;
+            //    Thread threadForReceive = new Thread(new ThreadStart(Listen));
+             //   threadForReceive.Start();
             }
             catch (Exception ex)
             {

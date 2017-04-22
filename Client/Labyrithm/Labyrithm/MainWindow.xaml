@@ -5,12 +5,20 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Labyrithm"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525" KeyDown="mainWindow_KeyDown" Closed="mainWindow_Closed">
+        Title="MainWindow" Height="394.8" Width="765" KeyDown="mainWindow_KeyDown" Closed="mainWindow_Closed">
     <Grid>
         <TextBox x:Name="nickName" HorizontalAlignment="Left" Height="26" Margin="168,41,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="99"/>
         <TextBox x:Name="IPaddress" HorizontalAlignment="Left" Height="26" Margin="168,72,0,0" TextWrapping="Wrap" Text="TextBox" VerticalAlignment="Top" Width="99"/>
         <Button x:Name="submitting" Content="Submit" HorizontalAlignment="Left" Margin="168,103,0,0" VerticalAlignment="Top" Width="99" Height="25" Click="submitting_Click"/>
         <Canvas x:Name="labyrithm" HorizontalAlignment="Left" Height="260" Margin="125,0,0,0" VerticalAlignment="Top" Width="304"/>
+        <ListView x:Name="playersStatList" HorizontalAlignment="Left" Height="258" Margin="505,10,0,0" VerticalAlignment="Top" Width="243" ItemsSource="{Binding}">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="Player" DisplayMemberBinding="{Binding Path=PlayerName}" Width="150"></GridViewColumn>
+                    <GridViewColumn Header="Points" DisplayMemberBinding="{Binding Path=PlayerPoints}"></GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
 
     </Grid>
 </Window>
